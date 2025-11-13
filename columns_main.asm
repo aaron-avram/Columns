@@ -4,9 +4,10 @@ RED: .word 0xff0000
 YELLOW: .word 0xffff00
 BLUE: .word 0x0000ff
 GREY: .word 0x808080
+BLACK: .word 0x000000
 WAITLIST_START: .word 0x100085d8
 COLUMN_START: .word 0x100083a4
-
+ADDR_KBRD: .word 0xffff0000
 # ...
 
 # FULLY DOCUMENT REGISTER USAGE
@@ -105,6 +106,20 @@ jal DRAW_INIT
 move $t0, $v0 # GET NEW POINTER
 jal REFILL_WAITLIST
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 MAIN_LOOP: 
 
 # SET SHIFT PARAMETERS
@@ -116,7 +131,7 @@ addu $t1, $t0, 128 # PEEK THE PIXEL BELOW POINTER
 
 # GET COLOUR AT LOCATION $t0
 lw $t2 0($t1)
-
+jal main_run
 # If pixel below is not empty then need to resolve collision
 DETECT_COLLISION: beq $t2, $zero, NO_COLLISION
 ### DEAL WITH COLOURS THEN SCORING AND SUCH
@@ -307,6 +322,68 @@ addiu $t1, $t1, 128 # RESET TO TOP POSITION
 sw $zero 0($t1) # OVERWRITE TO BLACK TO CREATE SHIFT
 
 jr $ra
+
+
+    
+# this is detect if keyboard is pressed
+main_run:
+    lw $t9, ADDR_KBRD               # $t0 = base address for keyboard
+    lw $t8, 0($t9)                  # Load first word from keyboard
+    beq $t8, 1, keyboard_input      # If first word 1, key is pressed
+    jr $ra
+
+# this is to react to what the keyboard is pressed
+keyboard_input:                     # A key is pressed
+    lw $a0, 4($t9)                  # Load second word from keyboard
+    beq $a0, 0x73, shuffle     # Check if the key q was pressed
+    beq $a0, 0x61, shiftL
+    beq $a0, 0x64, shiftR
+    li $v0, 1                       # ask system to print $a0
+    syscall
+
+    j main_run
+
+shuffle:
+    subi $t0, $t0, 256
+    lw $t6, 0($t0)
+    lw $t7, 128($t0)
+    lw $t8, 256($t0) 
+    
+    
+    sw $t8, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $t6, 128($t0)          # paint the second unit on the first row green
+    sw $t7, 256($t0)        # paint the first unit on the second row blue
+    addi $t0, $t0, 256
+    jr $ra
+    
+shiftL:
+    subi $t0, $t0, 256
+    lw $s3, BLACK
+    sw $s3, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $s3, 128($t0)          # paint the second unit on the first row green
+    sw $s3, 256($t0)
+    
+    sub $t0, $t0, 4
+    sw $s0, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $s1, 128($t0)          # paint the second unit on the first row green
+    sw $s2, 256($t0)
+    addi $t0, $t0, 256
+    jr $ra
+    
+shiftR:
+    subi $t0, $t0, 256
+    lw $s3, BLACK
+    sw $s3, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $s3, 128($t0)          # paint the second unit on the first row green
+    sw $s3, 256($t0)
+    
+    add $t0, $t0, 4
+    sw $s0, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $s1, 128($t0)          # paint the second unit on the first row green
+    sw $s2, 256($t0)
+    addi $t0, $t0, 256
+    jr $ra
+
 
 EXIT: 
 lw $t0, displayaddress # Store Column Pointer in $t0
