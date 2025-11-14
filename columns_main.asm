@@ -22,13 +22,6 @@ li $s2 0x0000ff # s2 = Green
 
 lw $t0, displayaddress # $t0 = base address for display
 
-#### STORAGE #### WILL MOVE THESE TO MEMORY
-# s0, s1, s2 --> Red Yellow Blue
-# s5 --> Grey
-# t0 --> Column pointer Cur Value
-# s3 --> Waitlist pointer
-# s4 --> Column pointer start value
-
 ##### SETUP #####
 
 ### X ###
@@ -117,14 +110,14 @@ jal REFILL_WAITLIST
 
 
 
-
+### MAIN LOOP WHERE GAME IS PLAYED
 
 
 MAIN_LOOP: 
 
 # SET SHIFT PARAMETERS
-move $a0, $t0
-li $a1, 3
+move $a0, $t0 # LOCATION TO SHIFT FROM
+li $a1, 3 # SIZE OF SHIFT
 jal SHIFT # CALL SHIFT
 move $t0, $v0 # GET NEW POINTER
 addu $t1, $t0, 128 # PEEK THE PIXEL BELOW POINTER
@@ -147,11 +140,13 @@ NOT_GREY:
 
 NO_COLLISION:
 
+move $a0, $t0
 jal main_run    #listen to any keyboard input
+move $t0, $v0
 
 addi $t3, $t3, 1    # increment by one for each cycle it waits
 li $v0, 32
-li $a0, 1
+li $a0, 10
 syscall
 beq $t3, 100, MAIN_LOOP        # if it waits (or loops) 100 times, then move on to next shifting
 
@@ -283,6 +278,7 @@ li $v0, 32
 li $a0, 1000
 syscall
 
+
 addiu $t4, $t4, 1 # INCREMENT COUNTER
 addiu $t2, $t2, 128 # INCREMENT COLUMN POINTER
 addiu $t7, $t7, -128 # INCREMENT WAITLIST POINTER
@@ -330,20 +326,22 @@ jr $ra
 
     
 # this is detect if keyboard is pressed
+# Arguments: $a0 the pointer to the current location
+# Returns: $v0 new output value
 main_run:
+    move $t0, $a0
     lw $t9, ADDR_KBRD               # $t0 = base address for keyboard
     lw $t8, 0($t9)                  # Load first word from keyboard
     beq $t8, 1, keyboard_input      # If first word 1, key is pressed
+    move $v0, $t0
     jr $ra
 
 # this is to react to what the keyboard is pressed
 keyboard_input:                     # A key is pressed
-    lw $a0, 4($t9)                  # Load second word from keyboard
-    beq $a0, 0x73, shuffle     # Check if the key q was pressed
-    beq $a0, 0x61, shiftL
-    beq $a0, 0x64, shiftR
-    li $v0, 1                       # ask system to print $a0
-    syscall
+    lw $t5, 4($t9)                  # Load second word from keyboard
+    beq $t5, 0x73, shuffle     # Check if the key q was pressed
+    beq $t5, 0x61, shiftL
+    beq $t5, 0x64, shiftR
 
     j main_run
 
@@ -358,9 +356,12 @@ shuffle:
     sw $t6, 128($t0)          # paint the second unit on the first row green
     sw $t7, 256($t0)        # paint the first unit on the second row blue
     addi $t0, $t0, 256
+    move $v0, $t0
     jr $ra
     
 shiftL:
+    lw $s0 -4($t0)
+    bne $s0, $zero, SHIFTL_END
     subi $t0, $t0, 256
     lw $t6, 0($t0)          # load the current color from the top 
     lw $t7, 128($t0)
@@ -378,9 +379,15 @@ shiftL:
     sw $t7, 128($t0)          # paint the second unit on the first row green
     sw $t8, 256($t0)
     addi $t0, $t0, 256
+    
+    SHIFTL_END:
+    
+    move $v0, $t0
     jr $ra
     
 shiftR:
+    lw $s0 4($t0)
+    bne $s0, $zero, SHIFTR_END
     subi $t0, $t0, 256
     lw $t6, 0($t0)          # load the current color from the top 
     lw $t7, 128($t0)
@@ -397,6 +404,10 @@ shiftR:
     sw $t7, 128($t0)          # paint the second unit on the first row green
     sw $t8, 256($t0)
     addi $t0, $t0, 256
+    
+    SHIFTR_END:
+    
+    move $v0, $t0
     jr $ra
 
 
