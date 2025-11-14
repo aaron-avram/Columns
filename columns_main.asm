@@ -131,7 +131,8 @@ addu $t1, $t0, 128 # PEEK THE PIXEL BELOW POINTER
 
 # GET COLOUR AT LOCATION $t0
 lw $t2 0($t1)
-jal main_run
+
+li $t3, 0           # time counter, wating time before next shift-downward
 # If pixel below is not empty then need to resolve collision
 DETECT_COLLISION: beq $t2, $zero, NO_COLLISION
 ### DEAL WITH COLOURS THEN SCORING AND SUCH
@@ -143,15 +144,18 @@ jal REFILL_WAITLIST # SHOW NEXT BLOCK AFTER CURRENT
 
 NOT_GREY:
 
+
 NO_COLLISION:
 
+jal main_run    #listen to any keyboard input
 
-
+addi $t3, $t3, 1    # increment by one for each cycle it waits
 li $v0, 32
-li $a0, 1000
+li $a0, 1
 syscall
+beq $t3, 100, MAIN_LOOP        # if it waits (or loops) 100 times, then move on to next shifting
 
-j MAIN_LOOP
+j NO_COLLISION
 
 ##### TERMINATE #####
 j EXIT
@@ -358,29 +362,40 @@ shuffle:
     
 shiftL:
     subi $t0, $t0, 256
+    lw $t6, 0($t0)          # load the current color from the top 
+    lw $t7, 128($t0)
+    lw $t8, 256($t0) 
+    
     lw $s3, BLACK
     sw $s3, 0($t0)          # paint the first unit (i.e., top-left) red
     sw $s3, 128($t0)          # paint the second unit on the first row green
     sw $s3, 256($t0)
     
+
+    
     sub $t0, $t0, 4
-    sw $s0, 0($t0)          # paint the first unit (i.e., top-left) red
-    sw $s1, 128($t0)          # paint the second unit on the first row green
-    sw $s2, 256($t0)
+    sw $t6, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $t7, 128($t0)          # paint the second unit on the first row green
+    sw $t8, 256($t0)
     addi $t0, $t0, 256
     jr $ra
     
 shiftR:
     subi $t0, $t0, 256
+    lw $t6, 0($t0)          # load the current color from the top 
+    lw $t7, 128($t0)
+    lw $t8, 256($t0) 
+    
     lw $s3, BLACK
     sw $s3, 0($t0)          # paint the first unit (i.e., top-left) red
     sw $s3, 128($t0)          # paint the second unit on the first row green
     sw $s3, 256($t0)
+
     
     add $t0, $t0, 4
-    sw $s0, 0($t0)          # paint the first unit (i.e., top-left) red
-    sw $s1, 128($t0)          # paint the second unit on the first row green
-    sw $s2, 256($t0)
+    sw $t6, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $t7, 128($t0)          # paint the second unit on the first row green
+    sw $t8, 256($t0)
     addi $t0, $t0, 256
     jr $ra
 
