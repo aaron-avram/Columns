@@ -5,9 +5,15 @@ YELLOW: .word 0xffff00
 BLUE: .word 0x0000ff
 GREY: .word 0x808080
 BLACK: .word 0x000000
+X_MAX: .word 10
+Y_MAX: .word 18
 WAITLIST_START: .word 0x100085d8
 COLUMN_START: .word 0x100083a4
+BOTTOM_LEFT: .word 0x10008c90
 ADDR_KBRD: .word 0xffff0000
+
+TO_CLEAR_STACK: .space 400
+
 # ...
 
 # FULLY DOCUMENT REGISTER USAGE
@@ -129,14 +135,16 @@ li $t3, 0           # time counter, wating time before next shift-downward
 # If pixel below is not empty then need to resolve collision
 DETECT_COLLISION: beq $t2, $zero, NO_COLLISION
 ### DEAL WITH COLOURS THEN SCORING AND SUCH
-lw $s5, GREY
-DETECT_GREY: bne $t2, $s5, NOT_GREY
+
+jal FILL_STACK
+
+move $a0, $v0 # GET STACK SIZE
+
+jal CLEAR_STACK
+
 jal DRAW_INIT
 move $t0, $v0 # GET NEW POINTER
 jal REFILL_WAITLIST # SHOW NEXT BLOCK AFTER CURRENT
-
-NOT_GREY:
-
 
 NO_COLLISION:
 
@@ -148,7 +156,7 @@ addi $t3, $t3, 1    # increment by one for each cycle it waits
 li $v0, 32
 li $a0, 10
 syscall
-beq $t3, 100, MAIN_LOOP        # if it waits (or loops) 100 times, then move on to next shifting
+beq $t3, 25, MAIN_LOOP        # if it waits (or loops) 100 times, then move on to next shifting
 
 j NO_COLLISION
 
@@ -275,7 +283,7 @@ lw $ra, 0($sp) # Move Return Address back
 addi $sp, $sp, 4 # Move stack pointer to top element on stack
 
 li $v0, 32
-li $a0, 1000
+li $a0, 100
 syscall
 
 
@@ -409,7 +417,154 @@ shiftR:
     
     move $v0, $t0
     jr $ra
+    
+### FUNCTION: FILL STACK
+### Loop through the grid and flag which pixels need to be removed
+### Args: None
+### Returns: ($v0) stack size
+FILL_STACK:
+la $s6, TO_CLEAR_STACK
+li $s2, 0 # STACK SIZE
 
+# OUTER_LOOP
+lw $s0, Y_MAX # MAXIMUM Y counter
+li $t4, 0 # Y counter
+lw $t7, BOTTOM_LEFT # POINTER
+FILL_Y_LOOP: beq $t4, $s0, END_FILL_Y_LOOP
+
+li $t5, 0 # count empty pixels for early return
+lw $s1, X_MAX # MAXIMUM X counter
+li $t6, 0 # X counter
+
+FILL_X_LOOP: beq $t6, $s1, END_FILL_X_LOOP
+
+lw $s3 0($t7) # Current Colour
+beq $s3, $zero, END_ROW # IF BLACK QUIT EARLY
+
+lw $s4 -128($t7) # Colour one above current
+CHECK_COL1: bne $s3, $s4, END_COL # IF NO MATCH SKIP
+
+lw $s5 -256($t7) # Colour two above current
+CHECK_COL2: bne $s4, $s5, END_COL # IF NO MATCH SKIP
+
+move $s7, $t7 # GET POINTER TO REMOVE VALUES
+
+# PUSH CURRENT
+sll $t9, $s2, 2 # GET OFFSET FOR STACK POINTER
+addu $t9, $t9, $s6 # GET PLACE TO PUT NEW VALUE
+sw $s7, 0($t9) # PUSH
+
+# DO THIS TWICE MORE
+addiu $s7, $s7, -128 # UP 1
+addiu $t9, $t9, 4 # FREE SPACE
+sw $s7, 0($t9) # PUSH
+
+addiu $s7, $s7, -128 # UP 1
+addiu $t9, $t9, 4 # FREE SPACE
+sw $s7, 0($t9) # PUSH
+
+addiu $s2, $s2, 3 # UPDATE STACK SIZE
+
+END_COL:
+
+lw $s3 0($t7) # Current Colour
+beq $s3, $zero, END_ROW # IF BLACK QUIT EARLY
+
+lw $s4 -124($t7) # Colour one diag from current
+CHECK_DIAG1: bne $s3, $s4, END_DIAG # IF NO MATCH SKIP
+
+lw $s5 -248($t7) # Colour two diag from current
+CHECK_DIAG2: bne $s4, $s5, END_DIAG # IF NO MATCH SKIP
+
+move $s7, $t7 # GET POINTER TO REMOVE VALUES
+
+# PUSH CURRENT
+sll $t9, $s2, 2 # GET OFFSET FOR STACK POINTER
+addu $t9, $t9, $s6 # GET PLACE TO PUT NEW VALUE
+sw $s7, 0($t9) # PUSH
+
+# DO THIS TWICE MORE
+addiu $s7, $s7, -124 # DIAG 1
+addiu $t9, $t9, 4 # FREE SPACE
+sw $s7, 0($t9) # PUSH
+
+addiu $s7, $s7, -124 # DIAG 1
+addiu $t9, $t9, 4 # FREE SPACE
+sw $s7, 0($t9) # PUSH
+
+addiu $s2, $s2, 3 # UPDATE STACK SIZE
+
+END_DIAG:
+
+lw $s3 0($t7) # Current Colour
+beq $s3, $zero, END_ROW # IF BLACK QUIT EARLY
+
+lw $s4 4($t7) # Colour one row from current
+CHECK_ROW1: bne $s3, $s4, END_ROW # IF NO MATCH SKIP
+
+lw $s5 8($t7) # Colour two row from current
+CHECK_ROW2: bne $s4, $s5, END_ROW # IF NO MATCH SKIP
+
+move $s7, $t7 # GET POINTER TO REMOVE VALUES
+
+# PUSH CURRENT
+sll $t9, $s2, 2 # GET OFFSET FOR STACK POINTER
+addu $t9, $t9, $s6 # GET PLACE TO PUT NEW VALUE
+sw $s7, 0($t9) # PUSH
+
+# DO THIS TWICE MORE
+addiu $s7, $s7, 4 # across 1
+addiu $t9, $t9, 4 # FREE SPACE
+sw $s7, 0($t9) # PUSH
+
+addiu $s7, $s7, 4 # across 1
+addiu $t9, $t9, 4 # FREE SPACE
+sw $s7, 0($t9) # PUSH
+
+addiu $s2, $s2, 3 # UPDATE STACK SIZE
+
+END_ROW:
+
+addiu $t6, $t6, 1 # INCREMENT X COUNTER
+addiu $t7, $t7, 4 # MOVE POINTER OVER
+bne $s3, $zero, FILL_X_LOOP
+addiu $t5, $t5, 1
+j FILL_X_LOOP
+END_FILL_X_LOOP:
+
+beq $t5, $s1, END_FILL_Y_LOOP # If all black row can stop
+# Increment
+addiu $t4, $t4, 1 # Y COUNTER ++
+sll $t8, $t4, 7 # GET NEW HEIGHT
+lw $t7, BOTTOM_LEFT # RESET X
+subu $t7, $t7, $t8 # SHIFT Y UP
+
+j FILL_Y_LOOP
+
+END_FILL_Y_LOOP:
+
+move $v0, $s2
+jr $ra
+
+### FUNCTION: CLEAR STACK
+### Pop stack and remove flagged colours
+### Args: ($a0) stack size
+CLEAR_STACK:
+move $s0, $a0 # STACK SIZE
+la $s1, TO_CLEAR_STACK # STACK POINTER
+
+CLEAR_LOOP: beq $s0, $zero, CLEARED
+addiu $t6, $s0, -1 # GET CORRECT INDEX
+sll $t6, $t6, 2 # GET OFFSET
+addu $t6, $t6, $s1 # GET POINTER TO CUR
+lw $t7 0($t6) # GET STACK ELEMENT
+sw $zero 0($t6) # CLEAR VALUE
+sw $zero 0($t7) # PAINT PIXEL IN ADDRESS BLACK
+addiu $s0, $s0, -1 # DECREMENT COUNTER
+j CLEAR_LOOP
+
+CLEARED:
+jr $ra
 
 EXIT: 
 lw $t0, displayaddress # Store Column Pointer in $t0
