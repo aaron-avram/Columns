@@ -477,11 +477,11 @@ END_COL:
 lw $s3 0($t7) # Current Colour
 beq $s3, $zero, END_ROW # IF BLACK QUIT EARLY
 
-lw $s4 -124($t7) # Colour one diag from current
-CHECK_DIAG1: bne $s3, $s4, END_DIAG # IF NO MATCH SKIP
+lw $s4 -124($t7) # Colour one right diag from current
+CHECK_RDIAG1: bne $s3, $s4, END_RDIAG # IF NO MATCH SKIP
 
-lw $s5 -248($t7) # Colour two diag from current
-CHECK_DIAG2: bne $s4, $s5, END_DIAG # IF NO MATCH SKIP
+lw $s5 -248($t7) # Colour two right diag from current
+CHECK_RDIAG2: bne $s4, $s5, END_RDIAG # IF NO MATCH SKIP
 
 move $s7, $t7 # GET POINTER TO REMOVE VALUES
 
@@ -501,7 +501,36 @@ sw $s7, 0($t9) # PUSH
 
 addiu $s2, $s2, 3 # UPDATE STACK SIZE
 
-END_DIAG:
+END_RDIAG:
+
+lw $s3 0($t7) # Current Colour
+beq $s3, $zero, END_ROW # IF BLACK QUIT EARLY
+
+lw $s4 -132($t7) # Colour one left diag from current
+CHECK_LDIAG1: bne $s3, $s4, END_LDIAG # IF NO MATCH SKIP
+
+lw $s5 -264($t7) # Colour two left diag from current
+CHECK_LDIAG2: bne $s4, $s5, END_LDIAG # IF NO MATCH SKIP
+
+move $s7, $t7 # GET POINTER TO REMOVE VALUES
+
+# PUSH CURRENT
+sll $t9, $s2, 2 # GET OFFSET FOR STACK POINTER
+addu $t9, $t9, $s6 # GET PLACE TO PUT NEW VALUE
+sw $s7, 0($t9) # PUSH
+
+# DO THIS TWICE MORE
+addiu $s7, $s7, -132 # DIAG 1
+addiu $t9, $t9, 4 # FREE SPACE
+sw $s7, 0($t9) # PUSH
+
+addiu $s7, $s7, -132 # DIAG 1
+addiu $t9, $t9, 4 # FREE SPACE
+sw $s7, 0($t9) # PUSH
+
+addiu $s2, $s2, 3 # UPDATE STACK SIZE
+
+END_LDIAG:
 
 lw $s3 0($t7) # Current Colour
 beq $s3, $zero, END_ROW # IF BLACK QUIT EARLY
