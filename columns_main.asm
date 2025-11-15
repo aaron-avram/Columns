@@ -136,11 +136,18 @@ li $t3, 0           # time counter, wating time before next shift-downward
 DETECT_COLLISION: beq $t2, $zero, NO_COLLISION
 ### DEAL WITH COLOURS THEN SCORING AND SUCH
 
+RESOLVE:
 jal FILL_STACK
 
 move $a0, $v0 # GET STACK SIZE
+beq $a0, $zero, NO_CLEARS # IF STACK WAS NOT PUSHED TO, DONT SHIFT
 
 jal CLEAR_STACK
+jal SHIFT_DOWN # SHIFT DOWN
+
+j RESOLVE # CHECK NEW SHIFTED BLOCKS
+
+NO_CLEARS:
 
 jal DRAW_INIT
 move $t0, $v0 # GET NEW POINTER
@@ -564,6 +571,59 @@ addiu $s0, $s0, -1 # DECREMENT COUNTER
 j CLEAR_LOOP
 
 CLEARED:
+jr $ra
+
+### SHIFT DOWN
+### SHIFT BLOCKS DOWN AFTER REMOVING COLLISIONS
+### NO ARGUMENTS OR RETURN VALUES
+SHIFT_DOWN:
+lw $s2 GREY # CONST
+
+# OUTER_LOOP
+lw $s0, Y_MAX # MAXIMUM Y counter
+li $t4, 0 # Y counter
+lw $t7, BOTTOM_LEFT # POINTER
+SHIFT_Y_LOOP: beq $t4, $s0, END_SHIFT_Y_LOOP
+
+li $t5, 0 # count empty pixels for early return
+lw $s1, X_MAX # MAXIMUM X counter
+li $t6, 0 # X counter
+
+SHIFT_X_LOOP: beq $t6, $s1, END_SHIFT_X_LOOP
+
+move $t8, $t7
+
+CHECK_SHIFT:
+lw $s3 0($t8) # Current Colour
+
+lw $s4 128($t8) # Colour one below current
+
+TO_SHIFT1: beq $s3, $zero, NO_SHIFT # CHECK THAT CUR COLOUR IS NOT BLACK
+TO_SHIFT2: beq $s3 , $s2, NO_SHIFT # CHECK THAT CUR COLOUR IS NOT GREY
+TO_SHIFT3: bne $s4 , $zero, NO_SHIFT # CHECK THAT BELOW COLOUR IS BLACK
+# Swap to produce shift
+sw $s4 0($t8)
+sw $s3 128($t8)
+
+addiu $t8, $t8, 128
+j CHECK_SHIFT
+
+NO_SHIFT:
+
+addiu $t6, $t6, 1 # INCREMENT X COUNTER
+addiu $t7, $t7, 4 # MOVE POINTER OVER
+j SHIFT_X_LOOP
+END_SHIFT_X_LOOP:
+
+# Increment
+addiu $t4, $t4, 1 # Y COUNTER ++
+sll $t8, $t4, 7 # GET NEW HEIGHT
+lw $t7, BOTTOM_LEFT # RESET X
+subu $t7, $t7, $t8 # SHIFT Y UP
+
+j SHIFT_Y_LOOP
+
+END_SHIFT_Y_LOOP:
 jr $ra
 
 EXIT: 
