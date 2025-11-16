@@ -11,6 +11,7 @@ WAITLIST_START: .word 0x100085d8
 COLUMN_START: .word 0x100083a4
 BOTTOM_LEFT: .word 0x10008c90
 ADDR_KBRD: .word 0xffff0000
+GAME_POINT: .word 0
 
 TO_CLEAR_STACK: .space 400
 
@@ -120,10 +121,11 @@ jal REFILL_WAITLIST
 
 
 MAIN_LOOP: 
-
+lw $s7, displayaddress
 # SET SHIFT PARAMETERS
 move $a0, $t0 # LOCATION TO SHIFT FROM
 li $a1, 3 # SIZE OF SHIFT
+
 jal SHIFT # CALL SHIFT
 move $t0, $v0 # GET NEW POINTER
 addu $t1, $t0, 128 # PEEK THE PIXEL BELOW POINTER
@@ -140,6 +142,22 @@ RESOLVE:
 jal FILL_STACK
 
 move $a0, $v0 # GET STACK SIZE
+
+lw $t1, GAME_POINT          # load the curent game point into $t1
+add $t1, $t1, $a0           # inrement $t1 by the socre earned this round
+sw $t1, GAME_POINT          # update the score to GAME_POINT
+move $s7, $a0
+lw $a0, GAME_POINT
+li $v0, 1
+syscall                     # print the score in console
+
+
+
+
+jal display_score           # display the score
+tem_to_retrun:
+move $a0, $s7
+
 beq $a0, $zero, NO_CLEARS # IF STACK WAS NOT PUSHED TO, DONT SHIFT
 
 jal CLEAR_STACK
@@ -163,7 +181,7 @@ addi $t3, $t3, 1    # increment by one for each cycle it waits
 li $v0, 32
 li $a0, 10
 syscall
-beq $t3, 25, MAIN_LOOP        # if it waits (or loops) 100 times, then move on to next shifting
+beq $t3, 10, MAIN_LOOP        # if it waits (or loops) 100 times, then move on to next shifting
 
 j NO_COLLISION
 
@@ -339,7 +357,7 @@ sw $zero 0($t1) # OVERWRITE TO BLACK TO CREATE SHIFT
 jr $ra
 
 
-    
+
 # this is detect if keyboard is pressed
 # Arguments: $a0 the pointer to the current location
 # Returns: $v0 new output value
@@ -354,9 +372,11 @@ main_run:
 # this is to react to what the keyboard is pressed
 keyboard_input:                     # A key is pressed
     lw $t5, 4($t9)                  # Load second word from keyboard
-    beq $t5, 0x73, shuffle     # Check if the key q was pressed
-    beq $t5, 0x61, shiftL
-    beq $t5, 0x64, shiftR
+    beq $t5, 0x77, shuffle          # Check if the key W was pressed
+    beq $t5, 0x61, shiftL           # Check if the key A was pressed
+    beq $t5, 0x64, shiftR           # Check if the key D was pressed
+    beq $t5, 0x73, shift_down       # Check if the key S was pressed
+    
 
     j main_run
 
@@ -424,6 +444,31 @@ shiftR:
     
     move $v0, $t0
     jr $ra
+    
+shift_down:
+    lw $s0 128($t0)
+    bne $s0, $zero, SHIFT_DOWN_END
+    subi $t0, $t0, 256      # to correct that the pointer pointing the the first pixel
+    lw $t6, 0($t0)          # load the current color from the top 
+    lw $t7, 128($t0)
+    lw $t8, 256($t0) 
+    
+    lw $s3, BLACK
+    sw $s3, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $s3, 128($t0)          # paint the second unit on the first row green
+    sw $s3, 256($t0)
+
+    addi $t0, $t0, 128
+    sw $t6, 0($t0)          # paint the first unit (i.e., top-left) red
+    sw $t7, 128($t0)          # paint the second unit on the first row green
+    sw $t8, 256($t0)
+    addi $t0, $t0, 256
+    
+    SHIFT_DOWN_END:
+    
+    move $v0, $t0
+    jr $ra
+
     
 ### FUNCTION: FILL STACK
 ### Loop through the grid and flag which pixels need to be removed
@@ -657,3 +702,264 @@ jr $ra
 
 EXIT: 
 lw $t0, displayaddress # Store Column Pointer in $t0
+
+
+### FUNCTION: DISPLAY SCORE ###
+# $a0 will be the score, dont tocuh this one
+# $a1 will be the x location
+# $a2 will be the y location
+
+
+
+    
+display_score:
+
+clean_score_display:
+    move $a1, $zero
+    addi $a1, $a1, 17
+    move $a2, $zero
+    addi $a2, $a2, 16
+    move $a3, $zero
+    addi $a3, $a3, 15
+    lw $t9, BLACK
+    move $t6, $zero             # clean_up counter
+clean_up_loop:
+    jal draw_horizontal_line
+    addi $t6, $t6, 1
+    addi $a2, $a2, 1
+    bne $t6, 7, clean_up_loop
+    
+    lw $t2, GAME_POINT
+    move $s4, $t2
+    jal display_score_init
+    
+draw_next_digit:
+    li $t1, 10 
+    # show the least significant digit one by one, by dividing 10 
+    div $s4, $t1
+    mfhi $s3                    # store the remainder in $t3, the last digit
+    mflo $s4                    # store the digits left in $t2
+    lw $t9, RED
+    beq $s3, 0, draw_zero
+    beq $s3, 1, draw_one
+    beq $s3, 2, draw_two
+    beq $s3, 3, draw_three
+    beq $s3, 4, draw_four
+    beq $s3, 5, draw_five
+    beq $s3, 6, draw_six
+    beq $s3, 7, draw_seven
+    beq $s3, 8, draw_eight
+    beq $s3, 9, draw_nine
+    
+after_draw:
+    # jal display_score_init
+    addi $a1, $a1, -5
+    bne $s4, 0, draw_next_digit
+    j tem_to_retrun
+
+    
+    
+    
+# initialize $a1, $a2 to the correct coordinate
+display_score_init:
+
+    move $a1, $zero                 
+    move $a2, $zero
+    add $a1, $zero, 27              # x offset
+    add $a2, $zero, 16              # y offset
+    move $a3, $zero
+    add $a3, $a3, 4                 # set the length to 4
+    jr $ra
+    
+# always start from the top-left of that digit
+draw_zero:
+
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, -6
+    j after_draw
+    
+draw_one:
+
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a2, $a2, -3
+    addi $a1, $a1, -3
+    j after_draw
+        
+draw_two:
+
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a2, $a2, -3
+    jal draw_vertical_line              # draw the other two vertical line
+    addi $a2, $a2, -3
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    j after_draw
+draw_three:
+
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a2, $a2, -3
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, -3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    j after_draw
+    
+draw_four:
+
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, -3
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a2, $a2, -3
+    addi $a1, $a1, -3
+    j after_draw
+    
+draw_five:
+
+    jal draw_vertical_line
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a1, $a1, 3
+    addi $a2, $a2, -3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    addi $a2, $a2, -3
+    j after_draw
+draw_six:
+
+    jal draw_vertical_line              
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a2, $a2, -3
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a2, $a2, -3
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    addi $a2, $a2, -3
+    j after_draw
+draw_seven:
+
+    jal draw_horizontal_line
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    addi $a2, $a2, -3
+    j after_draw
+draw_eight:
+
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, -6
+    j after_draw
+    
+draw_nine:
+
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, -3
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    addi $a2, $a2, -3
+    j after_draw
+ 
+
+
+# s1 is the location for top-left pixel
+# a1 is x coordinate, do not modify it
+# a2 is y coordinate, do not modify it
+# a3 is the length, do not modify it
+# any modificaation stored in corresponding $t register
+draw_vertical_line:
+# testing for $s4
+lw $s1, displayaddress
+sll $t1, $a1, 2         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
+add $t4, $s1, $t1       # add this horizontal offset to $s1, store the result in $t4
+sll $t2, $a2, 7         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
+add $t4, $t4, $t2       # add this vertical offset to $t4, store the result in $t4
+
+# Make a loop to draw a line.
+sll $t3, $a3, 7         # calculate the difference between the starting value for $t4 and the end value.
+add $t5, $t4, $t3       # set stopping location for $t4
+vertical_line_loop_start:
+beq $t4, $t5, vertical_line_loop_end  # check if $t0 has reached the final location of the line
+
+sw $t9, 0( $t4 )        # paint the current pixel red
+addi $t4, $t4, 128        # move $t0 to the next pixel in the row.
+j vertical_line_loop_start            # jump to the start of the loop
+vertical_line_loop_end:
+jr $ra    
+
+# s1 is the location for top-left pixel
+# a1 is x coordinate, do not modify it
+# a2 is y coordinate, do not modify it
+# a3 is the length, do not modify it
+# any modificaation stored in corresponding $t register
+draw_horizontal_line:
+# testing for $s4
+lw $s1, displayaddress
+sll $t1, $a1, 2         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
+add $t4, $s1, $t1       # add this horizontal offset to $s1, store the result in $t4
+sll $t2, $a2, 7         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
+add $t4, $t4, $t2       # add this vertical offset to $t4, store the result in $t4
+
+# Make a loop to draw a line.
+sll $t3, $a3, 2         # calculate the difference between the starting value for $t4 and the end value.
+add $t5, $t4, $t3       # set stopping location for $t4
+horizontal_line_loop_start:
+beq $t4, $t5, horizontal_line_loop_end  # check if $t0 has reached the final location of the line
+
+sw $t9, 0( $t4 )        # paint the current pixel red
+addi $t4, $t4, 4        # move $t0 to the next pixel in the row.
+j horizontal_line_loop_start            # jump to the start of the loop
+horizontal_line_loop_end:
+jr $ra     
