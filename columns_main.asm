@@ -16,6 +16,7 @@ WAIT_CYCLE: .word 100
 DIFFICULTY_LEVEL: .word 0
 
 TO_CLEAR_STACK: .space 400
+GAMW_OVER_CONDITION_PIXEL: .word 0x100084a4
 
 # ...
 
@@ -151,9 +152,9 @@ MAIN_LOOP:
 lw $s7, displayaddress
 # SET SHIFT PARAMETERS
 move $a0, $t0 # LOCATION TO SHIFT FROM
-addi $t1, $t0, 128  # load the color below the pointer
+addi $t1, $t0, 128  # load the address below the pointer
 lw $t1, 0($t1)
-bne $t1, $zero, no_more_shift
+bne $t1, $zero, no_more_shift       # if the pixel below is not black, dont shift anymore
 li $a1, 3 # SIZE OF SHIFT
 
 jal SHIFT # CALL SHIFT
@@ -284,6 +285,9 @@ jr $ra
 DRAW_INIT: # DRAW TOP 3 PIXELS
 
 # LATER add a branch to flag game over
+lw $t3, GAMW_OVER_CONDITION_PIXEL
+lw $t4, 0($t3)
+bne $t4, $zero, EXIT            # if at this pixel, its not black, game over
 
 ### SETUP ###
 li $t3, 3 # Max Iter
@@ -1008,4 +1012,5 @@ max_sped_reached:
     jr $ra
 
 EXIT: 
-lw $t0, displayaddress # Store Column Pointer in $t0
+li $v0, 10
+syscall
