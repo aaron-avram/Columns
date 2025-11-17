@@ -12,6 +12,8 @@ COLUMN_START: .word 0x100083a4
 BOTTOM_LEFT: .word 0x10008c90
 ADDR_KBRD: .word 0xffff0000
 GAME_POINT: .word 0
+WAIT_CYCLE: .word 100
+DIFFICULTY_LEVEL: .word 0
 
 TO_CLEAR_STACK: .space 400
 
@@ -28,6 +30,30 @@ li $s1 0xffff00 # $s1 = Yellow
 li $s2 0x0000ff # s2 = Green
 
 lw $t0, displayaddress # $t0 = base address for display
+
+### user input difficulty level to start the game ###
+input_difficulty:
+    lw $t9, ADDR_KBRD               # $t0 = base address for keyboard
+    lw $t8, 0($t9)                  # Load first word from keyboard
+    beq $t8, 1, difficulty_input      # If first word 1, key is pressed
+    j input_difficulty
+
+# this is to react to what the keyboard is pressed
+difficulty_input:                     # A key is pressed
+    lw $t5, 4($t9)                  # Load second word from keyboard
+    # arithmetic to calculate the difficulty level (wait cycle for each shifting)
+    move $t6, $zero
+    addi $t6, $t6, 3
+    and $t7, $t6, $t5
+    sw $t7, DIFFICULTY_LEVEL        # $t7 is the difficulty level (1, 2, or 3)
+
+jal update_wait_cycle
+    
+# update the number of cycles (miliseconds) it should wait, before proceeding to the next shift
+# 100 - 8 * DIFFICULTY_LEVEL - DIFFICULTY_LEVEL * (GAME_POINT //8)
+# dont use $a0
+# $t1 represents the difficulty level
+# $t2 represents the current score
 
 ##### SETUP #####
 
@@ -50,10 +76,10 @@ X_LOOP:
 beq $t3, $t4, X_END
 
 move $t8, $t0 # Use temp register for X offset
-sw $t1, 0($t8)
+sw $s5, 0($t8)
 
 addu $t8, $t8, $t7 # Offset by Y Max
-sw $t1, 0($t8)
+sw $s5, 0($t8)
 
 addiu $t3, $t3, 1
 addiu $t0, $t0, 4
@@ -86,10 +112,10 @@ Y_LOOP:
 beq $t3, $t5, Y_END
 
 move $t8, $t0
-sw $t1, 0($t8)
+sw $s5, 0($t8)
 
 addu $t8, $t8, $t7
-sw $t1, 0($t8)
+sw $s5, 0($t8)
 
 addiu $t0, $t0, 128
 addiu $t3, $t3, 1
@@ -146,18 +172,14 @@ move $a0, $v0 # GET STACK SIZE
 lw $t1, GAME_POINT          # load the curent game point into $t1
 add $t1, $t1, $a0           # inrement $t1 by the socre earned this round
 sw $t1, GAME_POINT          # update the score to GAME_POINT
-move $s7, $a0
-lw $a0, GAME_POINT
-li $v0, 1
-syscall                     # print the score in console
-
-
-
-
+# move $s7, $a0
+# lw $a0, GAME_POINT
+# li $v0, 1
+# syscall                     # print the score in console
 jal display_score           # display the score
 tem_to_retrun:
-move $a0, $s7
-
+# move $a0, $s7
+jal update_wait_cycle
 beq $a0, $zero, NO_CLEARS # IF STACK WAS NOT PUSHED TO, DONT SHIFT
 
 jal CLEAR_STACK
@@ -181,7 +203,9 @@ addi $t3, $t3, 1    # increment by one for each cycle it waits
 li $v0, 32
 li $a0, 10
 syscall
-beq $t3, 10, MAIN_LOOP        # if it waits (or loops) 100 times, then move on to next shifting
+lw $t4, WAIT_CYCLE
+# to-do: check that exact pixel filled or not to terminate it
+beq $t3, $t4, MAIN_LOOP        # if it waits (or loops) 100 times, then move on to next shifting
 
 j NO_COLLISION
 
@@ -700,8 +724,7 @@ j SHIFT_Y_LOOP
 END_SHIFT_Y_LOOP:
 jr $ra
 
-EXIT: 
-lw $t0, displayaddress # Store Column Pointer in $t0
+
 
 
 ### FUNCTION: DISPLAY SCORE ###
@@ -963,3 +986,19 @@ addi $t4, $t4, 4        # move $t0 to the next pixel in the row.
 j horizontal_line_loop_start            # jump to the start of the loop
 horizontal_line_loop_end:
 jr $ra     
+
+update_wait_cycle:
+
+    lw $t1, DIFFICULTY_LEVEL
+    lw $t2, GAME_POINT
+    srl $t2, $t2, 2                 # divide the score by 4
+    mul $t2, $t2, $t1               # DIFFICULTY_LEVEL * (GAME_POINT //8), stored in $t2
+    li $t3, 100                     # initial wait cycles
+    sll $t1, $t1, 3                 # 8 * DIFFICULTY_LEVEL
+    sub $t3, $t3, $t1               # 100 - 8 * DIFFICULTY_LEVEL - DIFFICULTY_LEVEL
+    sub $t3, $t3, $t2               # 100 - 8 * DIFFICULTY_LEVEL - DIFFICULTY_LEVEL * (GAME_POINT //8)
+    sw $t3, WAIT_CYCLE
+    jr $ra
+
+EXIT: 
+lw $t0, displayaddress # Store Column Pointer in $t0
