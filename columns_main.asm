@@ -147,15 +147,19 @@ jal REFILL_WAITLIST
 
 
 MAIN_LOOP: 
+
 lw $s7, displayaddress
 # SET SHIFT PARAMETERS
 move $a0, $t0 # LOCATION TO SHIFT FROM
+addi $t1, $t0, 128  # load the color below the pointer
+lw $t1, 0($t1)
+bne $t1, $zero, no_more_shift
 li $a1, 3 # SIZE OF SHIFT
 
 jal SHIFT # CALL SHIFT
 move $t0, $v0 # GET NEW POINTER
+no_more_shift:
 addu $t1, $t0, 128 # PEEK THE PIXEL BELOW POINTER
-
 # GET COLOUR AT LOCATION $t0
 lw $t2 0($t1)
 
@@ -997,7 +1001,10 @@ update_wait_cycle:
     sll $t1, $t1, 3                 # 8 * DIFFICULTY_LEVEL
     sub $t3, $t3, $t1               # 100 - 8 * DIFFICULTY_LEVEL - DIFFICULTY_LEVEL
     sub $t3, $t3, $t2               # 100 - 8 * DIFFICULTY_LEVEL - DIFFICULTY_LEVEL * (GAME_POINT //8)
+    li $t4, 10
+    blt $t3, $t4, max_sped_reached
     sw $t3, WAIT_CYCLE
+max_sped_reached:
     jr $ra
 
 EXIT: 
