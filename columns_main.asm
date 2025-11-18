@@ -152,8 +152,8 @@ MAIN_LOOP:
 lw $s7, displayaddress
 # SET SHIFT PARAMETERS
 move $a0, $t0 # LOCATION TO SHIFT FROM
-addi $t1, $t0, 128  # load the address below the pointer
-lw $t1, 0($t1)
+addi $t1, $t0, 128                  # load the address below the pointer
+lw $t1, 0($t1)                      # load the color in that pixel
 bne $t1, $zero, no_more_shift       # if the pixel below is not black, dont shift anymore
 li $a1, 3 # SIZE OF SHIFT
 
@@ -174,15 +174,15 @@ jal FILL_STACK
 
 move $a0, $v0 # GET STACK SIZE
 
-lw $t1, GAME_POINT          # load the curent game point into $t1
-add $t1, $t1, $a0           # inrement $t1 by the socre earned this round
-sw $t1, GAME_POINT          # update the score to GAME_POINT
+lw $t1, GAME_POINT              # load the curent game point into $t1
+add $t1, $t1, $a0               # inrement $t1 by the socre earned this round
+sw $t1, GAME_POINT              # update the score to GAME_POINT
 # move $s7, $a0
 # lw $a0, GAME_POINT
 # li $v0, 1
-# syscall                     # print the score in console
-jal display_score           # display the score
-tem_to_retrun:
+# syscall                       # print the score in console
+jal display_score               # display the score
+tem_to_retrun:                  # this is simply dummy return from display_score
 # move $a0, $s7
 jal update_wait_cycle
 beq $a0, $zero, NO_CLEARS # IF STACK WAS NOT PUSHED TO, DONT SHIFT
@@ -803,7 +803,7 @@ after_draw:
     # jal display_score_init
     addi $a1, $a1, -5
     bne $s4, 0, draw_next_digit
-    j tem_to_retrun
+    jr $ra
 
     
     
