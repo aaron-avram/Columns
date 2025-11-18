@@ -24,6 +24,7 @@ GAMW_OVER_CONDITION_PIXEL: .word 0x100084a4
 
 .text
 # ...
+re_start_the_game:
 li $t1, 0x808080 # $t1 = Grey
 li $s5, 0x808080 # $t1 = Grey
 li $s0 0xff0000 #  $s0 = Red
@@ -144,6 +145,9 @@ jal REFILL_WAITLIST
 
 
 
+
+
+
 ### MAIN LOOP WHERE GAME IS PLAYED
 
 
@@ -199,7 +203,9 @@ jal REFILL_WAITLIST # SHOW NEXT BLOCK AFTER CURRENT
 NO_COLLISION:
 
 move $a0, $t0
+
 jal main_run    #listen to any keyboard input
+
 move $t0, $v0
 
 addi $t3, $t3, 1    # increment by one for each cycle it waits
@@ -212,8 +218,8 @@ beq $t3, $t4, MAIN_LOOP        # if it waits (or loops) 100 times, then move on 
 
 j NO_COLLISION
 
-##### TERMINATE #####
-j EXIT
+# ##### TERMINATE #####
+# j EXIT
 
 # Function for getting next column
 REFILL_WAITLIST:
@@ -285,7 +291,7 @@ DRAW_INIT: # DRAW TOP 3 PIXELS
 # LATER add a branch to flag game over
 lw $t3, GAMW_OVER_CONDITION_PIXEL
 lw $t4, 0($t3)
-bne $t4, $zero, EXIT            # if at this pixel, its not black, game over
+bne $t4, $zero, game_over            # if at this pixel, its not black, game over
 
 ### SETUP ###
 li $t3, 3 # Max Iter
@@ -501,10 +507,116 @@ shift_down:
     jr $ra
 
 pause_for_next_p:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    
+# $a1 is x
+# $a2 is y
+# a3 is the length for each segment of line
+draw_pasued:
+    lw $t9, RED                     # set up color
+    move $s6, $t3
+
+    addi $a1, $zero, 3
+    move $a2, $zero
+    addi $a3, $zero, 3
+    # draw P
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    jal draw_vertical_line
+    jal draw_horizontal_line
+    addi $a2, $a2, -2
+    addi $a1, $a1, 2
+    jal draw_vertical_line
+    addi $a1, $a1, -2
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw A
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 2
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    jal draw_vertical_line
+    addi $a1, $a1, -2
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    addi $a2, $a2, -4
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw U
+
+    jal draw_vertical_line
+    addi $a1, $a1, 2
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    jal draw_vertical_line
+    addi $a1, $a1, -2
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, -4
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw S
+    jal draw_vertical_line
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, 2
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a1, $a1, 2
+    addi $a2, $a2, -2
+    jal draw_vertical_line
+    addi $a1, $a1, -2
+    addi $a2, $a2, -2
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw E
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, 2
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a2, $a2, -2
+    jal draw_vertical_line
+    addi $a2, $a2, -2
+    jal draw_vertical_line
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw D
+    jal draw_vertical_line
+    addi $a3, $zero, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, 2
+    addi $a3, $zero, 3
+    jal draw_vertical_line
+    addi $a3, $zero, 2
+    addi $a2, $a2, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, -3
+    addi $a1, $a1, 2
+    addi $a3, $zero, 3
+    jal draw_vertical_line
+    
+wait_till_next_input:
     lw $t9, ADDR_KBRD                   
     lw $t8, 0($t9)                      # load to see if the keyboard is pressed
     beq $t8, 1, check_second_input      # If first word 1, key is pressed
-    j pause_for_next_p
+    j wait_till_next_input
     
     
 check_second_input:
@@ -514,7 +626,110 @@ check_second_input:
     
 
 pause_end:
+
+remove_draw_pasued:
+    lw $t9, BLACK                     # set up color
+    # draw P
+    addi $a1, $zero, 3
+    move $a2, $zero
+    addi $a3, $zero, 3
+    
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    jal draw_vertical_line
+    jal draw_horizontal_line
+    addi $a2, $a2, -2
+    addi $a1, $a1, 2
+    jal draw_vertical_line
+    addi $a1, $a1, -2
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw A
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 2
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    jal draw_vertical_line
+    addi $a1, $a1, -2
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    addi $a2, $a2, -4
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw U
+
+    jal draw_vertical_line
+    addi $a1, $a1, 2
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    jal draw_vertical_line
+    addi $a1, $a1, -2
+    jal draw_vertical_line
+    addi $a2, $a2, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, -4
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw S
+    jal draw_vertical_line
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, 2
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a1, $a1, 2
+    addi $a2, $a2, -2
+    jal draw_vertical_line
+    addi $a1, $a1, -2
+    addi $a2, $a2, -2
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw E
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, 2
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a2, $a2, -2
+    jal draw_vertical_line
+    addi $a2, $a2, -2
+    jal draw_vertical_line
+    
+    # space for each word
+    addi $a1, $a1, 4
+    
+    # draw D
+    jal draw_vertical_line
+    addi $a3, $zero, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, 2
+    addi $a3, $zero, 3
+    jal draw_vertical_line
+    addi $a3, $zero, 2
+    addi $a2, $a2, 2
+    jal draw_horizontal_line
+    addi $a2, $a2, -3
+    addi $a1, $a1, 2
+    addi $a3, $zero, 3
+    jal draw_vertical_line
+    
+    
+
     move $v0, $t0
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    move $t3, $s6
     jr $ra
     
 ### FUNCTION: FILL STACK
@@ -1008,6 +1223,25 @@ sw $t9, 0( $t4 )        # paint the current pixel red
 addi $t4, $t4, 4        # move $t0 to the next pixel in the row.
 j horizontal_line_loop_start            # jump to the start of the loop
 horizontal_line_loop_end:
+jr $ra
+
+draw_diagonal_line:
+lw $s1, displayaddress
+sll $t1, $a1, 2         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
+add $t4, $s1, $t1       # add this horizontal offset to $s1, store the result in $t4
+sll $t2, $a2, 7         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
+add $t4, $t4, $t2       # add this vertical offset to $t4, store the result in $t4
+
+# Make a loop to draw a line.
+mult $t3, $a3, 132         # calculate the difference between the starting value for $t4 and the end value.
+add $t5, $t4, $t3       # set stopping location for $t4
+diagona_line_loop_start:
+beq $t4, $t5, diagona_line_loop_end  # check if $t0 has reached the final location of the line
+
+sw $t9, 0( $t4 )        # paint the current pixel red
+addi $t4, $t4, 132        # move $t0 to the next pixel in the row.
+j diagona_line_loop_start            # jump to the start of the loop
+diagona_line_loop_end:
 jr $ra     
 
 update_wait_cycle:
@@ -1025,6 +1259,209 @@ update_wait_cycle:
     sw $t3, WAIT_CYCLE
 max_sped_reached:
     jr $ra
+
+
+game_over:
+
+### clean Bipmap ### 
+    # __init__
+    move $a1, $zero                 
+    move $a2, $zero
+    add $a3, $zero, 32                 # set the length to 32
+    move $t8, $zero
+    lw $t9, BLACK
+    
+clean_loop:
+    beq $t8, 31, finish_cleaning
+    jal draw_horizontal_line
+    addi $a2, $a2, 1
+    addi $t8, $t8, 1
+    j clean_loop
+
+finish_cleaning:
+    # 1. display GAME OVER
+    
+    # setup display location 
+    move $a1, $zero                 
+    move $a2, $zero
+    add $a1, $zero, 5              # x offset
+    add $a2, $zero, 7              # y offset
+    move $a3, $zero
+    add $a3, $a3, 4                 # set the length to 4
+    lw $t9, RED
+    
+    # draw G
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 3
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, -6
+    
+    # space for each word
+    addi $a1, $a1, 5
+    
+    # draw A
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    addi $a2, $a2, -6
+    
+    # space for each word
+    addi $a1, $a1, 5
+    
+    # draw M
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    addi $a2, $a2, -6
+    addi $a1, $a1, 3
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    addi $a2, $a2, -6
+    
+    # space for each word
+    addi $a1, $a1, 5
+    
+    # draw E
+    jal draw_horizontal_line            # draw three horizontal line first
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line            # (x, y) at the most bottom-left
+    addi $a2, $a2, -3
+    jal draw_vertical_line
+    addi $a2, $a2, -3
+    jal draw_vertical_line
+    
+    # space for next line
+    add $a1, $zero, 5              # x offset
+    add $a2, $zero, 19              # y offset
+    
+    # draw O
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, -6
+    
+    # space for each word
+    addi $a1, $a1, 5
+    
+    # draw U
+    jal draw_vertical_line
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, -6
+    
+    # space for each word
+    addi $a1, $a1, 5
+    
+    # draw E
+    jal draw_horizontal_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, 3
+    jal draw_horizontal_line
+    addi $a2, $a2, -3
+    jal draw_vertical_line
+    addi $a2, $a2, -3
+    jal draw_vertical_line
+    
+    # space for each word
+    addi $a1, $a1, 5
+    
+    # draw R
+    jal draw_horizontal_line
+    jal draw_vertical_line
+    addi $a2, $a2, 3
+    jal draw_vertical_line
+    jal draw_horizontal_line
+    addi $a2, $a2, -3
+    addi $a1, $a1, 3
+    jal draw_vertical_line
+    addi $a1, $a1, -3
+    addi $a2, $a2, 3
+    jal draw_diagonal_line
+    
+    # 2. press R retry 
+    move $t1, $zero                 # time counter
+    addi $a0, $zero, 1000
+    addi $v0, $zero, 32
+    
+        
+press_r_retry:
+    addi $t1, $t1, 1                # incr the time by 1
+    lw $t9, ADDR_KBRD               # $t9 = base address for keyboard
+    lw $t8, 0($t9)                  # Load first word from keyboard
+    beq $t8, 1, check_if_its_r      # If first word 1, key is pressed
+    beq $t1, 10, EXIT               # after wating 10 sec, exit\
+    syscall
+    j press_r_retry
+    
+
+check_if_its_r:
+    lw $t5, 4($t9)                  # Load second word from keyboard
+    beq $t5, 0x72, set_up_retry     # Check if the key r was pressed
+    j press_r_retry
+
+
+set_up_retry:                 
+    move $a1, $zero                 
+    move $a2, $zero
+    add $a3, $zero, 32                 # set the length to 32
+    move $t8, $zero
+    lw $t9, BLACK
+    
+clean_up_game_over:
+    beq $t8, 31, reset_variables
+    jal draw_horizontal_line
+    addi $a2, $a2, 1
+    addi $t8, $t8, 1
+    j clean_up_game_over
+
+reset_variables:
+    li $t1, 100
+    sw $t1, WAIT_CYCLE
+    sw $zero, GAME_POINT
+    j re_start_the_game
 
 EXIT: 
 li $v0, 10
