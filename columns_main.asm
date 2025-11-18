@@ -3,6 +3,9 @@ displayaddress:     .word       0x10008000
 RED: .word 0xff0000
 YELLOW: .word 0xffff00
 BLUE: .word 0x0000ff
+GREEN: .word 0x00ff00
+TURQOUISE: .word 0x00ffff
+PURPLE: .word 0xff00ff
 GREY: .word 0x808080
 BLACK: .word 0x000000
 X_MAX: .word 10
@@ -235,12 +238,15 @@ WAIT_LOOP: beq $t3, $t4, WAIT_END
 
 li $v0, 42
 li $a0, 0
-li $a1, 3
+li $a1, 6
 syscall # Generate random colour
 
 # Constants
 li $t1, 1
 li $t2, 2
+li $t6, 3
+li $t7, 4
+li $t8, 5
 
 # Update position before branch
 move $t5, $t3
@@ -252,6 +258,9 @@ addu $t5, $t5, $s3
 beq $a0, $zero, GET_RED
 beq $a0, $t1, GET_YELLOW
 beq $a0, $t2, GET_BLUE
+beq $a0, $t6, GET_GREEN
+beq $a0, $t7, GET_TURQOUISE
+beq $a0, $t8, GET_PURPLE
 
 GET_RED:
 lw $s0, RED
@@ -259,13 +268,29 @@ sw $s0 0($t5)
 j  GET_COL_END
 
 GET_YELLOW:
-lw $s1, YELLOW
-sw $s1 0($t5)
+lw $s0, YELLOW
+sw $s0 0($t5)
 j  GET_COL_END
 
 GET_BLUE:
-lw $s2, BLUE
-sw $s2 0($t5)
+lw $s0, BLUE
+sw $s0 0($t5)
+j  GET_COL_END
+
+
+GET_GREEN:
+lw $s0, GREEN
+sw $s0 0($t5)
+j  GET_COL_END
+
+GET_TURQOUISE:
+lw $s0, TURQOUISE
+sw $s0 0($t5)
+j  GET_COL_END
+
+GET_PURPLE:
+lw $s0, PURPLE
+sw $s0 0($t5)
 j  GET_COL_END
 
 GET_COL_END:
