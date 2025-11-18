@@ -1,0 +1,94 @@
+\documentclass{article}
+
+%% Page Margins %%
+\usepackage{geometry}
+\geometry{
+    top = 0.75in,
+    bottom = 0.75in,
+    right = 0.75in,
+    left = 0.75in,
+}
+
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{parskip}
+
+\title{Assembly Project: Columns}
+
+% TODO: Enter your name
+\author{YA-CHUN, HO & Aaron Avram}
+
+\begin{document}
+\maketitle
+
+\section{Instruction and Summary}
+
+\begin{enumerate}
+
+    \item Which milestones were implemented?
+    
+    milestones 1 to 5
+
+    \item How to view the game:
+    % TODO: specify the pixes/unit, width and height of 
+    %       your game, etc.  NOTE: list these details in
+    %       the header of your breakout.asm file too!
+    
+    \begin{enumerate}
+
+    \item the width and height are 256 * 256 pixels, 8 pixels a unit 
+
+
+    \end{enumerate}
+
+    
+
+% \begin{figure}[ht!]
+%     \centering
+%     % \includegraphics[width=0.3\textwidth]{name.png}
+%     \caption{caption}
+%     \label{Instructions}
+% \end{figure}
+
+\item Game Summary:
+% TODO: Tell us a little about your game.
+\begin{itemize}
+\item The game is the regular Columns game
+\item There are multiple difficulty levels, which changes the speed of the columns dropping down. 
+\item We encourage the player to eliminate more blocks/rows at once. Thus, when it happens, the player will have some extra scores. 
+\item keyboard controls: \textbf{a} for shifting left, \textbf{d} for sifting right, \textbf{s} for shifting down, \textbf{w} for shuffling, \textbf{p} for pausing the game, \textbf{r} for restart the game after game over. 
+\end{itemize}
+
+    
+\end{enumerate}
+
+\section{Attribution Table}
+% TODO: If you worked in partners, tell us who was 
+%       responsible for which features. Some reweighting 
+%       might be possible in cases where one group member
+%       deserves extra credit for the work they put in.
+
+\begin{center}
+\begin{tabular}{|| c | c ||}
+\hline
+ Student 1 (YA-CHUN, HO 1010922806) &  Student 2 (Aaron Avram 1010845490) \\ 
+ \hline
+ Implement keyboard shifts & Draw Static Screen\\
+ \hline
+ Display the scores & Generate Different Colours\\
+ \hline
+ Implement pause & Implement Column Movement \\ 
+ \hline
+ Implement game over and retry & Detect Collisions \\ 
+ \hline
+    Implement difficulty level & Shift Grid After Collision\\
+ \hline
+\end{tabular}
+\end{center}
+
+\section{GitHub repo}
+
+https://github.com/aaron-avram/Columns.git
+
+
+\end{document}
