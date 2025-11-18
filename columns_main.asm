@@ -408,6 +408,7 @@ keyboard_input:                     # A key is pressed
     beq $t5, 0x61, shiftL           # Check if the key A was pressed
     beq $t5, 0x64, shiftR           # Check if the key D was pressed
     beq $t5, 0x73, shift_down       # Check if the key S was pressed
+    beq $t5, 0x70, pause_for_next_p       # Check if the key P was pressed
     
 
     j main_run
@@ -501,6 +502,22 @@ shift_down:
     move $v0, $t0
     jr $ra
 
+pause_for_next_p:
+    lw $t9, ADDR_KBRD                   
+    lw $t8, 0($t9)                      # load to see if the keyboard is pressed
+    beq $t8, 1, check_second_input      # If first word 1, key is pressed
+    j pause_for_next_p
+    
+    
+check_second_input:
+    lw $t8, 4($t9)                      # load the input
+    beq $t8, 0x70, pause_end            # if p is pressed second time, end pausing
+    j pause_for_next_p                  # otherwise, keep wait till next p
+    
+
+pause_end:
+    move $v0, $t0
+    jr $ra
     
 ### FUNCTION: FILL STACK
 ### Loop through the grid and flag which pixels need to be removed
