@@ -406,13 +406,14 @@ main_run:
     jr $ra
 
 # this is to react to what the keyboard is pressed
-keyboard_input:                     # A key is pressed
-    lw $t5, 4($t9)                  # Load second word from keyboard
-    beq $t5, 0x77, shuffle          # Check if the key W was pressed
-    beq $t5, 0x61, shiftL           # Check if the key A was pressed
-    beq $t5, 0x64, shiftR           # Check if the key D was pressed
-    beq $t5, 0x73, shift_down       # Check if the key S was pressed
-    beq $t5, 0x70, pause_for_next_p       # Check if the key P was pressed
+keyboard_input:                             # A key is pressed
+    lw $t5, 4($t9)                          # Load second word from keyboard
+    beq $t5, 0x77, shuffle                  # Check if the key W was pressed
+    beq $t5, 0x61, shiftL                   # Check if the key A was pressed
+    beq $t5, 0x64, shiftR                   # Check if the key D was pressed
+    beq $t5, 0x73, shift_down               # Check if the key S was pressed
+    beq $t5, 0x70, pause_for_next_p         # Check if the key P was pressed
+    beq $t5, 0x71, EXIT                     # Check if the key Q was pressed, quit the game
     
 
     j main_run
