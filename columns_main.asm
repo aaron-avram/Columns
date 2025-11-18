@@ -1,3 +1,17 @@
+# GAME SIZE: 10 pixel width and 19 pixel height
+# Controls:
+# TO START: enter:
+# 3: Hardest Difficulty
+# 2: Second Hardest Difficulty
+# 1: Third Hardest Difficulty
+# Any other key: Easiest Difficulty
+
+# When Playing:
+# Press p to pause and unpause and q to quit
+# Press a to shift column left and d to shift column right
+# Press s to shift column down
+# Press w to cycle column
+
 .data
 displayaddress:     .word       0x10008000
 RED: .word 0xff0000
@@ -21,9 +35,6 @@ DIFFICULTY_LEVEL: .word 0
 TO_CLEAR_STACK: .space 400
 GAMW_OVER_CONDITION_PIXEL: .word 0x100084a4
 
-# ...
-
-# FULLY DOCUMENT REGISTER USAGE
 
 .text
 # ...
