@@ -1,3 +1,4 @@
+# DISPLAY SIZE: 256 * 256 pixel, 8 pixel a unit
 # GAME SIZE: 10 pixel width and 19 pixel height
 # Controls:
 # TO START: enter:
