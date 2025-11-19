@@ -433,7 +433,7 @@ jr $ra
 # this is detect if keyboard is pressed
 # Arguments: $a0 the pointer to the current location
 # Returns: $v0 new output value
-main_run:
+main_run:                           # part of this function is from the starter code
     move $t0, $a0
     lw $t9, ADDR_KBRD               # $t0 = base address for keyboard
     lw $t8, 0($t9)                  # Load first word from keyboard
@@ -442,7 +442,7 @@ main_run:
     jr $ra
 
 # this is to react to what the keyboard is pressed
-keyboard_input:                             # A key is pressed
+keyboard_input:                             # A key is pressed, part of this function is from the starter code
     lw $t5, 4($t9)                          # Load second word from keyboard
     beq $t5, 0x77, shuffle                  # Check if the key W was pressed
     beq $t5, 0x61, shiftL                   # Check if the key A was pressed
@@ -1217,69 +1217,67 @@ draw_nine:
 # a2 is y coordinate, do not modify it
 # a3 is the length, do not modify it
 # any modificaation stored in corresponding $t register
-draw_vertical_line:
-# testing for $s4
-lw $s1, displayaddress
-sll $t1, $a1, 2         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
-add $t4, $s1, $t1       # add this horizontal offset to $s1, store the result in $t4
-sll $t2, $a2, 7         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
-add $t4, $t4, $t2       # add this vertical offset to $t4, store the result in $t4
+draw_vertical_line:                         # citation: part of this function is from class demo
+    lw $s1, displayaddress
+    sll $t1, $a1, 2                         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
+    add $t4, $s1, $t1                       # add this horizontal offset to $s1, store the result in $t4
+    sll $t2, $a2, 7                         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
+    add $t4, $t4, $t2                       # add this vertical offset to $t4, store the result in $t4
 
-# Make a loop to draw a line.
-sll $t3, $a3, 7         # calculate the difference between the starting value for $t4 and the end value.
-add $t5, $t4, $t3       # set stopping location for $t4
-vertical_line_loop_start:
-beq $t4, $t5, vertical_line_loop_end  # check if $t0 has reached the final location of the line
+    # Make a loop to draw a line.
+    sll $t3, $a3, 7                         # calculate the difference between the starting value for $t4 and the end value.
+    add $t5, $t4, $t3                       # set stopping location for $t4
+    vertical_line_loop_start:
+    beq $t4, $t5, vertical_line_loop_end    # check if $t0 has reached the final location of the line
 
-sw $t9, 0( $t4 )        # paint the current pixel red
-addi $t4, $t4, 128        # move $t0 to the next pixel in the row.
-j vertical_line_loop_start            # jump to the start of the loop
+    sw $t9, 0( $t4 )                        # paint the current pixel red
+    addi $t4, $t4, 128                      # move $t0 to the next pixel in the row.
+    j vertical_line_loop_start              # jump to the start of the loop
 vertical_line_loop_end:
-jr $ra    
+    jr $ra    
 
 # s1 is the location for top-left pixel
 # a1 is x coordinate, do not modify it
 # a2 is y coordinate, do not modify it
 # a3 is the length, do not modify it
 # any modificaation stored in corresponding $t register
-draw_horizontal_line:
-# testing for $s4
-lw $s1, displayaddress
-sll $t1, $a1, 2         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
-add $t4, $s1, $t1       # add this horizontal offset to $s1, store the result in $t4
-sll $t2, $a2, 7         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
-add $t4, $t4, $t2       # add this vertical offset to $t4, store the result in $t4
-
-# Make a loop to draw a line.
-sll $t3, $a3, 2         # calculate the difference between the starting value for $t4 and the end value.
-add $t5, $t4, $t3       # set stopping location for $t4
+draw_horizontal_line:                       # citation: part of this function is from class demo
+    lw $s1, displayaddress
+    sll $t1, $a1, 2                         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
+    add $t4, $s1, $t1                       # add this horizontal offset to $s1, store the result in $t4
+    sll $t2, $a2, 7                         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
+    add $t4, $t4, $t2                       # add this vertical offset to $t4, store the result in $t4
+    
+    # Make a loop to draw a line.
+    sll $t3, $a3, 2                         # calculate the difference between the starting value for $t4 and the end value.
+    add $t5, $t4, $t3                       # set stopping location for $t4
 horizontal_line_loop_start:
-beq $t4, $t5, horizontal_line_loop_end  # check if $t0 has reached the final location of the line
-
-sw $t9, 0( $t4 )        # paint the current pixel red
-addi $t4, $t4, 4        # move $t0 to the next pixel in the row.
-j horizontal_line_loop_start            # jump to the start of the loop
+    beq $t4, $t5, horizontal_line_loop_end  # check if $t0 has reached the final location of the line
+    
+    sw $t9, 0( $t4 )                        # paint the current pixel red
+    addi $t4, $t4, 4                        # move $t0 to the next pixel in the row.
+    j horizontal_line_loop_start            # jump to the start of the loop
 horizontal_line_loop_end:
-jr $ra
+    jr $ra
 
-draw_diagonal_line:
-lw $s1, displayaddress
-sll $t1, $a1, 2         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
-add $t4, $s1, $t1       # add this horizontal offset to $s1, store the result in $t4
-sll $t2, $a2, 7         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
-add $t4, $t4, $t2       # add this vertical offset to $t4, store the result in $t4
-
-# Make a loop to draw a line.
-mult $t3, $a3, 132         # calculate the difference between the starting value for $t4 and the end value.
-add $t5, $t4, $t3       # set stopping location for $t4
+draw_diagonal_line:                         # citation: part of this function is from class demo
+    lw $s1, displayaddress
+    sll $t1, $a1, 2                         # multiply the X coordinate by 4 to get the horizontal offset, stored in $t1
+    add $t4, $s1, $t1                       # add this horizontal offset to $s1, store the result in $t4
+    sll $t2, $a2, 7                         # multiply the Y coordinate by 128 to get the vertical offset, stored in $t2
+    add $t4, $t4, $t2                       # add this vertical offset to $t4, store the result in $t4
+    
+    # Make a loop to draw a line.
+    mult $t3, $a3, 132                      # calculate the difference between the starting value for $t4 and the end value.
+    add $t5, $t4, $t3                       # set stopping location for $t4
 diagona_line_loop_start:
-beq $t4, $t5, diagona_line_loop_end  # check if $t0 has reached the final location of the line
-
-sw $t9, 0( $t4 )        # paint the current pixel red
-addi $t4, $t4, 132        # move $t0 to the next pixel in the row.
-j diagona_line_loop_start            # jump to the start of the loop
+    beq $t4, $t5, diagona_line_loop_end     # check if $t0 has reached the final location of the line
+    
+    sw $t9, 0( $t4 )                        # paint the current pixel red
+    addi $t4, $t4, 132                      # move $t0 to the next pixel in the row.
+    j diagona_line_loop_start               # jump to the start of the loop
 diagona_line_loop_end:
-jr $ra     
+    jr $ra     
 
 update_wait_cycle:
 
